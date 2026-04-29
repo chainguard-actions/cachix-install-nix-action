@@ -1,6 +1,12 @@
 # cachix/install-nix-action
 
-Hardened GitHub Action by [Chainguard](https://www.chainguard.dev).
+Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/cachix/install-nix-action](https://github.com/cachix/install-nix-action).
+
+## Versions
+
+| Version | Tag | Upstream commit |
+|---------|-----|-----------------|
+| v31 | [`v31`](https://github.com/chainguard-actions/install-nix-action/tree/v31) | — |
 
 ## Privacy
 
