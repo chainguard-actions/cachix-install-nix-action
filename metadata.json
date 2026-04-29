@@ -1,5 +1,6 @@
 {
   "owner": "cachix",
   "name": "install-nix-action",
-  "visibility": ""
+  "visibility": "internal",
+  "description": "Installs Nix on GitHub Actions for the supported platforms: Linux and macOS."
 }

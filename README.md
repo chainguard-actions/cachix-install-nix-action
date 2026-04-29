@@ -1,5 +1,7 @@
 # cachix/install-nix-action
 
+Installs Nix on GitHub Actions for the supported platforms: Linux and macOS.
+
 Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/cachix/install-nix-action](https://github.com/cachix/install-nix-action).
 
 ## Versions
