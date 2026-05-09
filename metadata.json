@@ -2,5 +2,6 @@
   "owner": "cachix",
   "name": "install-nix-action",
   "visibility": "internal",
-  "description": "Installs Nix on GitHub Actions for the supported platforms: Linux and macOS."
+  "description": "Installs Nix on GitHub Actions for the supported platforms: Linux and macOS.",
+  "block_publish": false
 }

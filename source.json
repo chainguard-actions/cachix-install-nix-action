@@ -1,0 +1,6 @@
+{
+  "owner": "cachix",
+  "repo": "install-nix-action",
+  "version": "",
+  "url": "https://github.com/cachix/install-nix-action"
+}
