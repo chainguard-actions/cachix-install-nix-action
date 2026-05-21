@@ -8,7 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
-| v31 | [`v31`](https://github.com/chainguard-actions/cachix--install-nix-action/tree/v31) | — |
+| v31 | [`v31`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31) | — |
 
 ## Privacy
 
