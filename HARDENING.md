@@ -14,12 +14,12 @@ Action **cachix--install-nix-action/v31.10.6** was hardened automatically. 1 fin
 
 ### github-env-injection (severity: high)
 
-In install-nix.sh, the attacker-controlled input `inputs.nix_path` is passed via the `INPUT_NIX_PATH` environment variable (set from `${{ inputs.nix_path }}` in action.yml) and then written directly to `$GITHUB_ENV` without sanitization: `echo "NIX_PATH=${INPUT_NIX_PATH}" >> "$GITHUB_ENV"`. An attacker can supply a value containing newline characters to inject arbitrary key=value pairs into the GitHub Actions environment, potentially overwriting sensitive environment variables used by subsequent steps. The required sanitization step (`printf '%s' "$INPUT_NIX_PATH" | tr -d '\n\r'`) is absent before the write.
+In install-nix.sh, the attacker-controlled input INPUT_NIX_PATH (mapped from inputs.nix_path via action.yml env:) is written directly to $GITHUB_ENV without sanitization. An attacker can supply a value containing newline characters to inject arbitrary environment variable assignments for subsequent workflow steps. The required sanitization step (printf '%s' "$INPUT_NIX_PATH" | tr -d '\n\r') is absent before the write: `echo "NIX_PATH=${INPUT_NIX_PATH}" >> "$GITHUB_ENV"`
 
 Locations:
 
-- `install-nix.sh:121`
-- `action.yml:33`
+- `install-nix.sh:130`
+- `action.yml:36`
 
 ## Iteration Notes
 
@@ -29,5 +29,5 @@ Locations:
 
 **Notes:**
 
-Fixed github-env-injection vulnerability in install-nix.sh at line 121. The INPUT_NIX_PATH environment variable (derived from user-controlled input `inputs.nix_path`) was being written directly to $GITHUB_ENV without sanitization. Fixed by adding `safe_nix_path=$(printf '%s' "$INPUT_NIX_PATH" | tr -d '\n\r')` before the echo command, and using `$safe_nix_path` instead of `$INPUT_NIX_PATH` when writing to $GITHUB_ENV. This prevents newline injection attacks that could overwrite arbitrary environment variables in subsequent workflow steps.
+Fixed github-env-injection in install-nix.sh at line 130. The INPUT_NIX_PATH value (mapped from inputs.nix_path in action.yml) was being written directly to $GITHUB_ENV without sanitization. Added a sanitization step using `safe_nix_path=$(printf '%s' "$INPUT_NIX_PATH" | tr -d '\n\r')` before the write, and updated the echo statement to use the sanitized variable instead of the raw INPUT_NIX_PATH.
 

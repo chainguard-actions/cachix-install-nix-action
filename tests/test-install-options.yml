@@ -1,4 +1,4 @@
-name: Test Nix installation with install_options and install_url
+name: Test Nix installation with install_url and install_options
 on:
   workflow_dispatch:
 jobs:
@@ -11,6 +11,8 @@ jobs:
         with:
           install_url: https://releases.nixos.org/nix/nix-2.18.1/install
           install_options: --no-daemon
+          enable_kvm: false
+          set_as_trusted_user: true
       - name: Assert nix is installed
         run: |
           echo "Checking nix is available..."
@@ -18,5 +20,5 @@ jobs:
             echo "FAIL: nix command not found"
             exit 1
           fi
-          echo "nix version: $(nix --version)"
-          echo "PASS"
+          echo "PASS: nix is installed at $(command -v nix)"
+          nix --version

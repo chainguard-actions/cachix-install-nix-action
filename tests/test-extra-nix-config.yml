@@ -12,6 +12,8 @@ jobs:
           extra_nix_config: |
             sandbox = false
           nix_path: nixpkgs=channel:nixos-unstable
+          enable_kvm: false
+          set_as_trusted_user: true
       - name: Assert nix is installed
         run: |
           echo "Checking nix is available..."
@@ -19,8 +21,8 @@ jobs:
             echo "FAIL: nix command not found"
             exit 1
           fi
-          echo "nix version: $(nix --version)"
-          echo "PASS"
+          echo "PASS: nix is installed"
+          nix --version
       - name: Assert NIX_PATH is set
         run: |
           echo "NIX_PATH: $NIX_PATH"
@@ -28,4 +30,13 @@ jobs:
             echo "FAIL: NIX_PATH is not set"
             exit 1
           fi
-          echo "PASS"
+          echo "PASS: NIX_PATH=$NIX_PATH"
+      - name: Assert extra nix config was applied
+        run: |
+          echo "Checking nix.conf for sandbox setting..."
+          if ! grep -q "sandbox = false" /etc/nix/nix.conf; then
+            echo "FAIL: sandbox = false not found in /etc/nix/nix.conf"
+            cat /etc/nix/nix.conf
+            exit 1
+          fi
+          echo "PASS: extra_nix_config was applied"
