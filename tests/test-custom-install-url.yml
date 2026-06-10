@@ -1,4 +1,4 @@
-name: Test basic Nix installation
+name: Test Nix installation with custom install_url
 on:
   workflow_dispatch:
 jobs:
@@ -9,9 +9,8 @@ jobs:
       - id: install-nix
         uses: .
         with:
-          extra_nix_config: |
-            sandbox = false
-          nix_path: "nixpkgs=channel:nixos-unstable"
+          install_url: "https://releases.nixos.org/nix/nix-2.34.7/install"
+          install_options: "--no-daemon"
       - name: Assert Nix is installed
         run: |
           echo "Checking nix binary..."
@@ -20,18 +19,6 @@ jobs:
             exit 1
           fi
           echo "PASS: nix is installed at $(command -v nix)"
-      - name: Assert NIX_PATH is set
-        run: |
-          echo "NIX_PATH=$NIX_PATH"
-          if [ -z "$NIX_PATH" ]; then
-            echo "FAIL: NIX_PATH is not set"
-            exit 1
-          fi
-          if [[ "$NIX_PATH" != *"nixpkgs=channel:nixos-unstable"* ]]; then
-            echo "FAIL: NIX_PATH does not contain expected value"
-            exit 1
-          fi
-          echo "PASS: NIX_PATH=$NIX_PATH"
       - name: Assert nix command works
         run: |
           nix --version

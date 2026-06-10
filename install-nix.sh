@@ -151,6 +151,9 @@ else
   NIX_LINK="$HOME/.nix-profile"
 fi
 
+# Sanitize NIX_LINK to prevent newline injection into $GITHUB_ENV / $GITHUB_PATH
+NIX_LINK=$(printf '%s' "$NIX_LINK" | tr -d '\n\r')
+
 # Set Nix profiles
 echo "NIX_PROFILES=/nix/var/nix/profiles/default $NIX_LINK" >>"$GITHUB_ENV"
 
