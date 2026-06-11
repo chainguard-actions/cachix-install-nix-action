@@ -1,0 +1,30 @@
+name: Test basic Nix installation with extra config and nix_path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          extra_nix_config: |
+            sandbox = false
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Assert Nix is installed
+        run: |
+          echo "Checking nix binary..."
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found"
+            exit 1
+          fi
+          echo "PASS: nix is installed at $(command -v nix)"
+      - name: Assert NIX_PATH is set
+        run: |
+          echo "NIX_PATH=$NIX_PATH"
+          if [ -z "$NIX_PATH" ]; then
+            echo "FAIL: NIX_PATH is not set"
+            exit 1
+          fi
+          echo "PASS: NIX_PATH=$NIX_PATH"

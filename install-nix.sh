@@ -6,7 +6,7 @@ if nix_path="$(type -p nix)"; then
   exit
 fi
 
-if [[ ($OSTYPE =~ linux) && ($INPUT_ENABLE_KVM == 'true') ]]; then
+if [[ ("$OSTYPE" =~ linux) && ("$INPUT_ENABLE_KVM" == 'true') ]]; then
   enable_kvm() {
     echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-install-nix-action-kvm.rules
     sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
@@ -37,7 +37,7 @@ if [[ $OSTYPE =~ darwin ]]; then
   add_config "ssl-cert-file = /etc/ssl/cert.pem"
 fi
 # Allow binary caches specified at user level
-if [[ $INPUT_SET_AS_TRUSTED_USER == 'true' ]]; then
+if [[ "$INPUT_SET_AS_TRUSTED_USER" == 'true' ]]; then
   add_config "trusted-users = root ${USER:-}"
 fi
 # Add a GitHub access token.
@@ -57,12 +57,12 @@ fi
 if [[ -n "${INPUT_EXTRA_NIX_CONFIG:-}" ]]; then
   add_config "$INPUT_EXTRA_NIX_CONFIG"
 fi
-if [[ ! $INPUT_EXTRA_NIX_CONFIG =~ "experimental-features" ]]; then
+if [[ ! "$INPUT_EXTRA_NIX_CONFIG" =~ "experimental-features" ]]; then
   add_config "experimental-features = nix-command flakes"
 fi
 # Always allow substituting from the cache, even if the derivation has `allowSubstitutes = false`.
 # This is a CI optimisation to avoid having to download the inputs for already-cached derivations to rebuild trivial text files.
-if [[ ! $INPUT_EXTRA_NIX_CONFIG =~ "always-allow-substitutes" ]]; then
+if [[ ! "$INPUT_EXTRA_NIX_CONFIG" =~ "always-allow-substitutes" ]]; then
   add_config "always-allow-substitutes = true"
 fi
 
@@ -73,7 +73,7 @@ installer_options=(
 )
 
 # Enable daemon on macOS and Linux systems with systemd, unless --no-daemon is specified
-if [[ (! $INPUT_INSTALL_OPTIONS =~ "--no-daemon") && ($OSTYPE =~ darwin || -e /run/systemd/system) ]]; then
+if [[ (! "$INPUT_INSTALL_OPTIONS" =~ "--no-daemon") && ("$OSTYPE" =~ darwin || -e /run/systemd/system) ]]; then
   use_daemon() { true; }
 else
   use_daemon() { false; }
@@ -102,7 +102,7 @@ echo "installer options: ${installer_options[*]}"
 
 # There is --retry-on-errors, but only newer curl versions support that
 curl_retries=5
-nix_version=2.34.4
+nix_version=2.34.7
 while ! curl -sS -o "$workdir/install" -v --fail -L "${INPUT_INSTALL_URL:-https://releases.nixos.org/nix/nix-${nix_version}/install}"; do
   sleep 1
   ((curl_retries--))
@@ -133,7 +133,8 @@ fi
 # Set temporary directory if not already set
 # Fixes https://github.com/cachix/install-nix-action/issues/197
 if [[ -z "${TMPDIR:-}" ]]; then
-  echo "TMPDIR=${RUNNER_TEMP}" >>"$GITHUB_ENV"
+  safe_runner_temp=$(printf '%s' "$RUNNER_TEMP" | tr -d '\n\r')
+  echo "TMPDIR=${safe_runner_temp}" >>"$GITHUB_ENV"
 fi
 
 # Determine the profile path.
@@ -150,6 +151,8 @@ if [[ -n "${NIX_STATE_HOME:-}" ]]; then
 else
   NIX_LINK="$HOME/.nix-profile"
 fi
+# Sanitize NIX_LINK to prevent newline injection into $GITHUB_ENV / $GITHUB_PATH
+NIX_LINK=$(printf '%s' "$NIX_LINK" | tr -d '\n\r')
 
 # Set Nix profiles
 echo "NIX_PROFILES=/nix/var/nix/profiles/default $NIX_LINK" >>"$GITHUB_ENV"

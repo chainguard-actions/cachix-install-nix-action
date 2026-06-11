@@ -1,0 +1,29 @@
+name: Test Nix installation with custom install_url
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.18.1/install
+      - name: Assert Nix is installed
+        run: |
+          echo "Checking nix binary..."
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found"
+            exit 1
+          fi
+          echo "PASS: nix is installed at $(command -v nix)"
+      - name: Assert Nix version
+        run: |
+          NIX_VERSION=$(nix --version)
+          echo "Nix version: $NIX_VERSION"
+          if [ -z "$NIX_VERSION" ]; then
+            echo "FAIL: could not determine nix version"
+            exit 1
+          fi
+          echo "PASS: $NIX_VERSION"
