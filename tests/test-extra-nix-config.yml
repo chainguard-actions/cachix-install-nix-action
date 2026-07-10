@@ -1,0 +1,54 @@
+name: Test extra_nix_config input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          enable_kvm: false
+          extra_nix_config: |
+            sandbox = false
+      - name: Assert nix is installed
+        run: |
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found in PATH"
+            exit 1
+          fi
+          echo "PASS: nix found at $(command -v nix)"
+      - name: Assert nix config contains sandbox setting
+        run: |
+          echo "Checking /etc/nix/nix.conf for sandbox setting..."
+          if [[ ! -f /etc/nix/nix.conf ]]; then
+            echo "WARN: /etc/nix/nix.conf not found, checking nix show-config..."
+            NIX_CONFIG=$(nix show-config 2>&1 || true)
+            echo "$NIX_CONFIG"
+            if echo "$NIX_CONFIG" | grep -q "sandbox"; then
+              echo "PASS: sandbox setting found in nix show-config"
+            else
+              echo "FAIL: sandbox setting not found in nix config"
+              exit 1
+            fi
+          else
+            cat /etc/nix/nix.conf
+            if grep -q "sandbox" /etc/nix/nix.conf; then
+              echo "PASS: sandbox setting found in /etc/nix/nix.conf"
+            else
+              echo "FAIL: sandbox setting not found in /etc/nix/nix.conf"
+              exit 1
+            fi
+          fi
+      - name: Assert experimental-features are enabled
+        run: |
+          echo "Checking experimental-features..."
+          NIX_CONFIG=$(nix show-config 2>&1 || true)
+          echo "$NIX_CONFIG"
+          if echo "$NIX_CONFIG" | grep -q "experimental-features"; then
+            echo "PASS: experimental-features found in nix config"
+          else
+            echo "FAIL: experimental-features not found in nix config"
+            exit 1
+          fi

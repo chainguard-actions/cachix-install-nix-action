@@ -1,0 +1,57 @@
+name: "Update nix"
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+    - cron: "31 2 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-nix-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Update nix releases
+        env:
+         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest_nix=$(
+            gh api repos/NixOS/nix/tags --paginate --jq '.[].name' |
+            grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' |
+            sort -V |
+            tail -n 1
+          )
+          if [ -z "$latest_nix" ]; then
+            echo "Failed to determine latest Nix version." >&2
+            exit 1
+          fi
+          current_nix=$(grep -oE 'nix_version=[0-9.]+' ./install-nix.sh | cut -d= -f2)
+          echo "Current Nix version: ${current_nix}"
+          echo "Latest Nix version: ${latest_nix}"
+          echo "CURRENT_NIX=${current_nix}" >> $GITHUB_ENV
+          echo "LATEST_NIX=${latest_nix}" >> $GITHUB_ENV
+          sed -i -E "s/nix_version=[0-9.]+/nix_version=${latest_nix}/" ./install-nix.sh
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          title: "nix: ${{ env.CURRENT_NIX }} -> ${{ env.LATEST_NIX }}"
+          commit-message: "nix: ${{ env.CURRENT_NIX }} -> ${{ env.LATEST_NIX }}"
+          body: |
+            This PR updates the Nix version from ${{ env.CURRENT_NIX }} to ${{ env.LATEST_NIX }}.
+
+            **To trigger the CI:**
+
+            1. Checkout the PR branch:
+               ```bash
+               gh pr checkout <pr-number>
+               ```
+
+            2. Amend and force push:
+               ```bash
+               git commit --amend --no-edit
+               git push --force-with-lease
+               ```
+          labels: dependencies

@@ -1,0 +1,70 @@
+name: "install-nix-action test"
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  nixpkgs_channel: nixpkgs=channel:nixos-25.05
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      # For the list of available images:
+      #   GitHub images: https://github.com/actions/runner-images?tab=readme-ov-file#available-images
+      #   Partner images: https://github.com/actions/partner-runner-images?tab=readme-ov-file#available-images
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            system: x86_64-linux
+            oldest_installer_version: nix-2.8.0
+          - runs-on: ubuntu-22.04
+            system: x86_64-linux
+            oldest_installer_version: nix-2.8.0
+          - runs-on: ubuntu-24.04-arm
+            system: aarch64-linux
+            oldest_installer_version: nix-2.8.0
+          - runs-on: ubuntu-22.04-arm
+            system: aarch64-linux
+            oldest_installer_version: nix-2.8.0
+          - runs-on: macos-latest
+            system: aarch64-darwin
+            oldest_installer_version: nix-2.18.6
+          - runs-on: macos-26
+            system: aarch64-darwin
+            oldest_installer_version: nix-2.18.6
+          - runs-on: macos-15
+            system: aarch64-darwin
+            oldest_installer_version: nix-2.18.6
+          - runs-on: macos-14
+            system: aarch64-darwin
+            oldest_installer_version: nix-2.8.0
+          - runs-on: macos-15-intel
+            system: x86_64-darwin
+            oldest_installer_version: nix-2.18.6
+    uses: ./.github/workflows/test-per-system.yml
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      system: ${{ matrix.system }}
+      oldest_installer_version: ${{ matrix.oldest_installer_version }}
+
+  act-support:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - run: |
+        curl -fsSL -o /tmp/act-install.sh https://raw.githubusercontent.com/nektos/act/master/install.sh
+        sudo bash /tmp/act-install.sh
+    - run: docker pull ghcr.io/catthehacker/ubuntu:js-24.04
+    - run: |
+        ./bin/act push \
+          -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:js-24.04 \
+          -j simple-build \
+          --matrix runs-on:ubuntu-latest \
+          --matrix system:x86_64-linux

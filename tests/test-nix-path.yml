@@ -1,0 +1,34 @@
+name: Test nix_path input sets NIX_PATH
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          enable_kvm: false
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Assert nix binary is available
+        run: |
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found in PATH"
+            exit 1
+          fi
+          echo "PASS: nix found at $(command -v nix)"
+      - name: Assert NIX_PATH is set to the provided value
+        env:
+          ACTUAL_NIX_PATH: ${{ env.NIX_PATH }}
+        run: |
+          echo "NIX_PATH: $ACTUAL_NIX_PATH"
+          if [[ -z "$ACTUAL_NIX_PATH" ]]; then
+            echo "FAIL: NIX_PATH is not set"
+            exit 1
+          fi
+          if [[ "$ACTUAL_NIX_PATH" != "nixpkgs=channel:nixos-unstable" ]]; then
+            echo "FAIL: expected NIX_PATH='nixpkgs=channel:nixos-unstable', got '$ACTUAL_NIX_PATH'"
+            exit 1
+          fi
+          echo "PASS: NIX_PATH=$ACTUAL_NIX_PATH"

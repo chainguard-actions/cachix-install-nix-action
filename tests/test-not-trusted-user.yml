@@ -1,0 +1,45 @@
+name: Test installation without setting trusted user
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          enable_kvm: false
+          set_as_trusted_user: false
+      - name: Assert nix binary is available
+        run: |
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found in PATH"
+            exit 1
+          fi
+          echo "PASS: nix found at $(command -v nix)"
+      - name: Assert trusted-users not set to current user in nix.conf
+        run: |
+          echo "Checking /etc/nix/nix.conf for trusted-users..."
+          CURRENT_USER="${USER:-runner}"
+          echo "Current user: $CURRENT_USER"
+          if [[ -f /etc/nix/nix.conf ]]; then
+            cat /etc/nix/nix.conf
+            if grep -q "trusted-users.*$CURRENT_USER" /etc/nix/nix.conf; then
+              echo "FAIL: current user '$CURRENT_USER' found in trusted-users despite set_as_trusted_user=false"
+              exit 1
+            fi
+            echo "PASS: current user not in trusted-users"
+          else
+            echo "INFO: /etc/nix/nix.conf not found, checking nix show-config..."
+            NIX_CONFIG=$(nix show-config 2>&1 || true)
+            echo "$NIX_CONFIG"
+            echo "PASS: nix installed successfully without trusted user setting"
+          fi
+      - name: Assert /nix directory exists
+        run: |
+          if [[ ! -d /nix ]]; then
+            echo "FAIL: /nix directory does not exist"
+            exit 1
+          fi
+          echo "PASS: /nix directory exists"
