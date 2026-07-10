@@ -10,6 +10,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 |---------|-----|-----------------|
 | v31 | [`v31`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31) | [`8aa0397`](https://github.com/cachix/install-nix-action/commit/8aa03977d8d733052d78f4e008a241fd1dbf36b3) |
 | v31.10.6 | [`v31.10.6`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31.10.6) | [`8aa0397`](https://github.com/cachix/install-nix-action/commit/8aa03977d8d733052d78f4e008a241fd1dbf36b3) |
+| v31.10.7 | [`v31.10.7`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31.10.7) | [`a49548c`](https://github.com/cachix/install-nix-action/commit/a49548c11d9846ad46ecc0115273879b045f001c) |
 
 ## Privacy
 
