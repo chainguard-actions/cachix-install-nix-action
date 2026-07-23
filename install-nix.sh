@@ -133,7 +133,8 @@ fi
 # Set temporary directory if not already set
 # Fixes https://github.com/cachix/install-nix-action/issues/197
 if [[ -z "${TMPDIR:-}" ]]; then
-  echo "TMPDIR=${RUNNER_TEMP}" >>"$GITHUB_ENV"
+  safe_runner_temp=$(printf '%s' "$RUNNER_TEMP" | tr -d '\n\r')
+  echo "TMPDIR=${safe_runner_temp}" >>"$GITHUB_ENV"
 fi
 
 # Determine the profile path.
@@ -150,12 +151,11 @@ if [[ -n "${NIX_STATE_HOME:-}" ]]; then
 else
   NIX_LINK="$HOME/.nix-profile"
 fi
-
-# Sanitize NIX_LINK to prevent newline injection into GITHUB_ENV / GITHUB_PATH
+# Sanitize NIX_LINK to prevent newline injection into $GITHUB_ENV / $GITHUB_PATH
 safe_nix_link=$(printf '%s' "$NIX_LINK" | tr -d '\n\r')
 
 # Set Nix profiles
-echo "NIX_PROFILES=/nix/var/nix/profiles/default $safe_nix_link" >>"$GITHUB_ENV"
+echo "NIX_PROFILES=/nix/var/nix/profiles/default ${safe_nix_link}" >>"$GITHUB_ENV"
 
 # Set NIX_SSL_CERT_FILE if not already configured
 if [[ -z "${NIX_SSL_CERT_FILE:-}" ]]; then
@@ -172,8 +172,8 @@ if [[ -z "${NIX_SSL_CERT_FILE:-}" ]]; then
     echo "NIX_SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt" >>"$GITHUB_ENV"
   elif [[ -e "/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt" ]]; then # fall back to cacert in default Nix profile
     echo "NIX_SSL_CERT_FILE=/nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt" >>"$GITHUB_ENV"
-  elif [[ -e "$safe_nix_link/etc/ssl/certs/ca-bundle.crt" ]]; then # fall back to cacert in user Nix profile
-    echo "NIX_SSL_CERT_FILE=$safe_nix_link/etc/ssl/certs/ca-bundle.crt" >>"$GITHUB_ENV"
+  elif [[ -e "${safe_nix_link}/etc/ssl/certs/ca-bundle.crt" ]]; then # fall back to cacert in user Nix profile
+    echo "NIX_SSL_CERT_FILE=${safe_nix_link}/etc/ssl/certs/ca-bundle.crt" >>"$GITHUB_ENV"
   fi
 fi
 

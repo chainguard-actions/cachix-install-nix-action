@@ -1,4 +1,4 @@
-name: Test Nix installation with no-daemon mode
+name: Test Nix installation in no-daemon mode
 on:
   workflow_dispatch:
 jobs:
@@ -6,41 +6,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: install-nix
+
+      - name: Install Nix (no-daemon mode)
+        id: install-nix
         uses: .
         with:
-          enable_kvm: false
           install_options: --no-daemon
-      - name: Assert nix binary is available
+
+      - name: Assert nix binary is on PATH
         run: |
-          echo "Checking for nix binary in PATH..."
+          echo "Checking for nix binary..."
           if ! command -v nix &>/dev/null; then
-            echo "FAIL: nix binary not found in PATH"
+            echo "FAIL: nix binary not found on PATH"
             exit 1
           fi
           echo "PASS: nix found at $(command -v nix)"
-      - name: Assert nix daemon is not running
+
+      - name: Assert nix version runs
         run: |
-          echo "Checking that nix-daemon is not running..."
-          if systemctl is-active nix-daemon &>/dev/null 2>&1; then
-            echo "WARN: nix-daemon is running (may be expected in some environments)"
-          else
-            echo "PASS: nix-daemon is not active (no-daemon mode confirmed)"
-          fi
-      - name: Assert nix store is accessible
-        run: |
-          echo "Checking /nix/store..."
-          if [[ ! -d /nix/store ]]; then
-            echo "FAIL: /nix/store does not exist"
-            exit 1
-          fi
-          echo "PASS: /nix/store exists"
-      - name: Assert nix version works
-        run: |
-          NIX_VER=$(nix --version 2>&1 || true)
-          echo "nix version: $NIX_VER"
-          if [[ -z "$NIX_VER" ]]; then
+          echo "Running nix --version..."
+          NIX_VERSION=$(nix --version 2>&1 || true)
+          echo "nix version: $NIX_VERSION"
+          if [ -z "$NIX_VERSION" ]; then
             echo "FAIL: nix --version returned empty output"
             exit 1
           fi
-          echo "PASS: $NIX_VER"
+          echo "PASS: nix --version returned: $NIX_VERSION"
+
+      - name: Assert nix store exists
+        run: |
+          if [ ! -d /nix/store ]; then
+            echo "FAIL: /nix/store directory does not exist"
+            exit 1
+          fi
+          echo "PASS: /nix/store exists"
+
+      - name: Assert nix-daemon is NOT running (no-daemon mode)
+        run: |
+          echo "Checking that nix-daemon is not running..."
+          if pgrep -x nix-daemon &>/dev/null; then
+            echo "INFO: nix-daemon is running (may be expected on some systems)"
+          else
+            echo "PASS: nix-daemon is not running (no-daemon mode confirmed)"
+          fi

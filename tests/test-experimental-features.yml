@@ -1,4 +1,4 @@
-name: Test basic Nix installation
+name: Test Nix installation with custom experimental features
 on:
   workflow_dispatch:
 jobs:
@@ -7,9 +7,12 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Install Nix (basic)
+      - name: Install Nix with custom experimental-features
         id: install-nix
         uses: .
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
 
       - name: Assert nix binary is on PATH
         run: |
@@ -20,25 +23,14 @@ jobs:
           fi
           echo "PASS: nix found at $(command -v nix)"
 
-      - name: Assert nix version runs
+      - name: Assert nix flakes command works
         run: |
-          echo "Running nix --version..."
-          NIX_VERSION=$(nix --version 2>&1 || true)
-          echo "nix version: $NIX_VERSION"
-          if [ -z "$NIX_VERSION" ]; then
-            echo "FAIL: nix --version returned empty output"
+          echo "Testing nix flake --help..."
+          if ! nix flake --help &>/dev/null; then
+            echo "FAIL: nix flake command not available (experimental-features may not be set)"
             exit 1
           fi
-          echo "PASS: nix --version returned: $NIX_VERSION"
-
-      - name: Assert NIX_PROFILES env var is set
-        run: |
-          echo "NIX_PROFILES: $NIX_PROFILES"
-          if [ -z "$NIX_PROFILES" ]; then
-            echo "FAIL: NIX_PROFILES is not set"
-            exit 1
-          fi
-          echo "PASS: NIX_PROFILES=$NIX_PROFILES"
+          echo "PASS: nix flake command is available"
 
       - name: Assert nix store exists
         run: |

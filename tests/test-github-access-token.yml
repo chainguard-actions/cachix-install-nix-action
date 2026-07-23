@@ -1,4 +1,4 @@
-name: Test github_access_token input
+name: Test Nix installation with github_access_token
 on:
   workflow_dispatch:
 jobs:
@@ -6,19 +6,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+
+      - name: Install Nix with github_access_token
+        id: install-nix
         uses: .
         with:
           github_access_token: ${{ github.token }}
-      - name: Assert nix is installed
+
+      - name: Assert nix binary is on PATH
         run: |
-          echo "Checking nix installation..."
+          echo "Checking for nix binary..."
           if ! command -v nix &>/dev/null; then
-            echo "FAIL: nix command not found"
+            echo "FAIL: nix binary not found on PATH"
             exit 1
           fi
-          echo "PASS: nix is installed"
-      - name: Assert nix works
+          echo "PASS: nix found at $(command -v nix)"
+
+      - name: Assert nix version runs
         run: |
-          nix --version
-          echo "PASS: nix --version succeeded"
+          echo "Running nix --version..."
+          NIX_VERSION=$(nix --version 2>&1 || true)
+          echo "nix version: $NIX_VERSION"
+          if [ -z "$NIX_VERSION" ]; then
+            echo "FAIL: nix --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: nix --version returned: $NIX_VERSION"
+
+      - name: Assert nix store exists
+        run: |
+          if [ ! -d /nix/store ]; then
+            echo "FAIL: /nix/store directory does not exist"
+            exit 1
+          fi
+          echo "PASS: /nix/store exists"

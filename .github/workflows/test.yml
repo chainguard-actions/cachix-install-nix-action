@@ -6,8 +6,7 @@ on:
       - master
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   nixpkgs_channel: nixpkgs=channel:nixos-25.05
@@ -59,7 +58,7 @@ jobs:
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
     - run: |
-        curl -fsSL -o /tmp/act-install.sh https://raw.githubusercontent.com/nektos/act/master/install.sh
+        curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh -o /tmp/act-install.sh
         sudo bash /tmp/act-install.sh
     - run: docker pull ghcr.io/catthehacker/ubuntu:js-24.04
     - run: |
