@@ -1,0 +1,42 @@
+name: Test basic Nix installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+      - name: Assert nix is installed and on PATH
+        run: |
+          echo "Checking nix binary..."
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix not found on PATH"
+            exit 1
+          fi
+          echo "nix found at: $(command -v nix)"
+          echo "PASS: nix is installed"
+      - name: Assert nix version is reported
+        run: |
+          echo "Running: nix --version"
+          nix --version
+          echo "PASS: nix --version succeeded"
+      - name: Assert NIX_PROFILES is set
+        env:
+          NIX_PROFILES: ${{ env.NIX_PROFILES }}
+        run: |
+          echo "NIX_PROFILES: $NIX_PROFILES"
+          if [ -z "$NIX_PROFILES" ]; then
+            echo "FAIL: NIX_PROFILES is not set"
+            exit 1
+          fi
+          echo "PASS: NIX_PROFILES is set"
+      - name: Assert nix store is accessible
+        run: |
+          echo "Checking /nix/store..."
+          if [ ! -d /nix/store ]; then
+            echo "FAIL: /nix/store does not exist"
+            exit 1
+          fi
+          echo "PASS: /nix/store exists"

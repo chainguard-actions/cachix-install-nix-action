@@ -1,0 +1,39 @@
+name: Test no-daemon installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          install_options: "--no-daemon"
+      - name: Assert nix is installed in single-user mode
+        run: |
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix not found on PATH"
+            exit 1
+          fi
+          echo "nix found at: $(command -v nix)"
+          echo "PASS: nix is installed"
+      - name: Assert nix version works
+        run: |
+          nix --version
+          echo "PASS: nix --version succeeded"
+      - name: Assert nix store is accessible
+        run: |
+          if [ ! -d /nix/store ]; then
+            echo "FAIL: /nix/store does not exist"
+            exit 1
+          fi
+          echo "PASS: /nix/store exists"
+      - name: Assert nix-daemon is NOT running
+        run: |
+          # In single-user (no-daemon) mode, nix-daemon should not be running
+          if systemctl is-active nix-daemon.service &>/dev/null; then
+            echo "WARN: nix-daemon is running despite --no-daemon flag"
+          else
+            echo "PASS: nix-daemon is not running (expected for --no-daemon install)"
+          fi

@@ -1,0 +1,56 @@
+name: 'Install Nix'
+description: 'Installs Nix on GitHub Actions for the supported platforms: Linux and macOS.'
+author: 'Domen Kožar'
+inputs:
+  extra_nix_config:
+    description: 'Gets appended to `/etc/nix/nix.conf` if passed.'
+  github_access_token:
+    description: 'Configure Nix to pull from GitHub using the given GitHub token.'
+  install_url:
+    description: 'Installation URL that will contain a script to install Nix.'
+  install_options:
+    description: 'Additional installer flags passed to the installer script.'
+  nix_path:
+    description: 'Set NIX_PATH environment variable.'
+  enable_kvm:
+    description: 'Enable KVM for hardware-accelerated virtualization on Linux, if available.'
+    required: false
+    default: true
+  set_as_trusted_user:
+    description: 'Add current user to `trusted-users`.'
+    required: false
+    default: true
+branding:
+  color: 'blue'
+  icon: 'sun'
+runs:
+  using: 'composite'
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - run: ${GITHUB_ACTION_PATH}/install-nix.sh
+      shell: bash
+      env:
+        INPUT_EXTRA_NIX_CONFIG: ${{ inputs.extra_nix_config }}
+        INPUT_GITHUB_ACCESS_TOKEN: ${{ inputs.github_access_token }}
+        INPUT_INSTALL_OPTIONS: ${{ inputs.install_options }}
+        INPUT_INSTALL_URL: ${{ inputs.install_url }}
+        INPUT_NIX_PATH: ${{ inputs.nix_path }}
+        INPUT_ENABLE_KVM: ${{ inputs.enable_kvm }}
+        INPUT_SET_AS_TRUSTED_USER: ${{ inputs.set_as_trusted_user }}
+        GITHUB_TOKEN: ${{ github.token }}
