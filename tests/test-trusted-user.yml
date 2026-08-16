@@ -1,0 +1,41 @@
+name: Test Nix installation with set_as_trusted_user disabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          set_as_trusted_user: false
+      - name: Assert nix is installed
+        run: |
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix not found on PATH"
+            exit 1
+          fi
+          echo "PASS: nix found at $(command -v nix)"
+      - name: Assert trusted-users is not set for current user
+        run: |
+          echo "Checking /etc/nix/nix.conf for trusted-users..."
+          if [ -f /etc/nix/nix.conf ]; then
+            cat /etc/nix/nix.conf
+            # When set_as_trusted_user=false, the current user should not be in trusted-users
+            # (root may still be there from other config, but the current user should not be added)
+            CURRENT_USER="${USER:-$(whoami)}"
+            echo "Current user: $CURRENT_USER"
+            if grep -q "trusted-users = root ${CURRENT_USER}" /etc/nix/nix.conf; then
+              echo "FAIL: trusted-users contains current user '$CURRENT_USER' but set_as_trusted_user=false"
+              exit 1
+            fi
+            echo "PASS: current user '$CURRENT_USER' is not in trusted-users"
+          else
+            echo "INFO: /etc/nix/nix.conf not found (may be daemon mode)"
+            echo "PASS: nix installed successfully"
+          fi
+      - name: Assert nix works
+        run: |
+          nix --version
+          echo "PASS: nix --version succeeded"

@@ -133,7 +133,8 @@ fi
 # Set temporary directory if not already set
 # Fixes https://github.com/cachix/install-nix-action/issues/197
 if [[ -z "${TMPDIR:-}" ]]; then
-  echo "TMPDIR=${RUNNER_TEMP}" >>"$GITHUB_ENV"
+  safe_runner_temp=$(printf '%s' "$RUNNER_TEMP" | tr -d '\n\r')
+  echo "TMPDIR=${safe_runner_temp}" >>"$GITHUB_ENV"
 fi
 
 # Determine the profile path.
@@ -150,8 +151,8 @@ if [[ -n "${NIX_STATE_HOME:-}" ]]; then
 else
   NIX_LINK="$HOME/.nix-profile"
 fi
-
-# Sanitize NIX_LINK to prevent newline injection into $GITHUB_ENV / $GITHUB_PATH
+# Sanitize NIX_LINK to prevent newline injection into GITHUB_ENV / GITHUB_PATH
+# NIX_STATE_HOME is a workflow-controlled environment variable and may contain newlines.
 NIX_LINK=$(printf '%s' "$NIX_LINK" | tr -d '\n\r')
 
 # Set Nix profiles

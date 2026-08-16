@@ -1,0 +1,31 @@
+name: Test Nix installation with custom NIX_PATH
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Assert nix is installed
+        run: |
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix not found on PATH"
+            exit 1
+          fi
+          echo "PASS: nix found at $(command -v nix)"
+      - name: Assert NIX_PATH is set correctly
+        run: |
+          echo "NIX_PATH=$NIX_PATH"
+          if [ -z "$NIX_PATH" ]; then
+            echo "FAIL: NIX_PATH is not set"
+            exit 1
+          fi
+          if [ "$NIX_PATH" != "nixpkgs=channel:nixos-unstable" ]; then
+            echo "FAIL: NIX_PATH expected 'nixpkgs=channel:nixos-unstable' but got '$NIX_PATH'"
+            exit 1
+          fi
+          echo "PASS: NIX_PATH is set to '$NIX_PATH'"

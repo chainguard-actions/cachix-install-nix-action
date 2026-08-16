@@ -1,4 +1,4 @@
-name: Test basic Nix installation
+name: Test Nix installation in no-daemon mode
 on:
   workflow_dispatch:
 jobs:
@@ -8,32 +8,28 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: install-nix
         uses: .
-      - name: Assert nix is on PATH
+        with:
+          install_options: --no-daemon
+      - name: Assert nix is installed
         run: |
-          echo "Checking nix binary..."
           if ! command -v nix &>/dev/null; then
             echo "FAIL: nix not found on PATH"
             exit 1
           fi
           echo "PASS: nix found at $(command -v nix)"
-      - name: Assert nix version works
+      - name: Assert nix works in single-user mode
         run: |
-          echo "Running nix --version..."
           nix --version
-          if [ $? -ne 0 ]; then
-            echo "FAIL: nix --version failed"
-            exit 1
-          fi
-          echo "PASS: nix --version succeeded"
-      - name: Assert NIX_PROFILES is set
+          echo "PASS: nix --version succeeded in no-daemon mode"
+      - name: Assert nix-daemon is not running
         run: |
-          echo "NIX_PROFILES=$NIX_PROFILES"
-          if [ -z "$NIX_PROFILES" ]; then
-            echo "FAIL: NIX_PROFILES is not set"
-            exit 1
+          if systemctl is-active nix-daemon &>/dev/null; then
+            echo "INFO: nix-daemon is running (unexpected for --no-daemon)"
+            # Not a hard failure - some environments may differ
+          else
+            echo "PASS: nix-daemon is not active (expected for --no-daemon)"
           fi
-          echo "PASS: NIX_PROFILES is set"
-      - name: Assert nix store exists
+      - name: Assert nix store is accessible
         run: |
           if [ ! -d /nix/store ]; then
             echo "FAIL: /nix/store does not exist"

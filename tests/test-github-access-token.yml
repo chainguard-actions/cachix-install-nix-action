@@ -1,4 +1,4 @@
-name: Test Nix installation with github_access_token
+name: Test github_access_token input
 on:
   workflow_dispatch:
 jobs:
@@ -9,24 +9,20 @@ jobs:
       - id: action
         uses: .
         with:
-          github_access_token: dummy-token-for-testing
-          enable_kvm: false
-          set_as_trusted_user: true
-      - name: Assert nix is installed
+          github_access_token: ${{ github.token }}
+      - name: Assert Nix is installed
         run: |
-          echo "Checking nix is available..."
+          echo "Checking nix is installed..."
           if ! command -v nix &>/dev/null; then
             echo "FAIL: nix command not found"
             exit 1
           fi
-          echo "PASS: nix is installed at $(command -v nix)"
-          nix --version
-      - name: Assert github access token config was applied
+          echo "PASS: nix is installed"
+      - name: Assert nix.conf has github token config
         run: |
-          echo "Checking nix.conf for github access-tokens setting..."
-          if ! grep -q "access-tokens" /etc/nix/nix.conf; then
+          echo "Checking /etc/nix/nix.conf for github token config..."
+          if ! grep -q "access-tokens" /etc/nix/nix.conf 2>/dev/null; then
             echo "FAIL: access-tokens not found in /etc/nix/nix.conf"
-            cat /etc/nix/nix.conf
             exit 1
           fi
-          echo "PASS: github_access_token was applied to nix config"
+          echo "PASS: github access token configured in nix.conf"

@@ -1,4 +1,4 @@
-name: Test Nix installation with extra_nix_config and nix_path
+name: Test Nix installation with extra nix config
 on:
   workflow_dispatch:
 jobs:
@@ -6,37 +6,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+      - id: install-nix
         uses: .
         with:
           extra_nix_config: |
             sandbox = false
-          nix_path: nixpkgs=channel:nixos-unstable
-          enable_kvm: false
-          set_as_trusted_user: true
       - name: Assert nix is installed
         run: |
-          echo "Checking nix is available..."
           if ! command -v nix &>/dev/null; then
-            echo "FAIL: nix command not found"
+            echo "FAIL: nix not found on PATH"
             exit 1
           fi
-          echo "PASS: nix is installed"
-          nix --version
-      - name: Assert NIX_PATH is set
+          echo "PASS: nix found at $(command -v nix)"
+      - name: Assert nix config contains sandbox setting
         run: |
-          echo "NIX_PATH: $NIX_PATH"
-          if [ -z "$NIX_PATH" ]; then
-            echo "FAIL: NIX_PATH is not set"
-            exit 1
-          fi
-          echo "PASS: NIX_PATH=$NIX_PATH"
-      - name: Assert extra nix config was applied
-        run: |
-          echo "Checking nix.conf for sandbox setting..."
-          if ! grep -q "sandbox = false" /etc/nix/nix.conf; then
-            echo "FAIL: sandbox = false not found in /etc/nix/nix.conf"
+          echo "Checking /etc/nix/nix.conf for sandbox setting..."
+          if [ -f /etc/nix/nix.conf ]; then
             cat /etc/nix/nix.conf
+            if grep -q "sandbox = false" /etc/nix/nix.conf; then
+              echo "PASS: sandbox = false found in /etc/nix/nix.conf"
+            else
+              echo "FAIL: sandbox = false not found in /etc/nix/nix.conf"
+              exit 1
+            fi
+          else
+            echo "FAIL: /etc/nix/nix.conf does not exist"
             exit 1
           fi
-          echo "PASS: extra_nix_config was applied"
+      - name: Assert experimental-features is set (default)
+        run: |
+          echo "Checking /etc/nix/nix.conf for experimental-features..."
+          if grep -q "experimental-features" /etc/nix/nix.conf; then
+            echo "PASS: experimental-features found in nix.conf"
+          else
+            echo "FAIL: experimental-features not found in nix.conf"
+            exit 1
+          fi
