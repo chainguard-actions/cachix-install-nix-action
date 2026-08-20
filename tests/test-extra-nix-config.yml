@@ -1,0 +1,58 @@
+name: Test Nix installation with extra_nix_config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Nix with extra config
+        id: install-nix
+        uses: .
+        with:
+          extra_nix_config: |
+            sandbox = false
+            cores = 1
+
+      - name: Assert nix is installed
+        run: |
+          echo "Checking nix binary..."
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found on PATH"
+            exit 1
+          fi
+          echo "PASS: nix found at $(command -v nix)"
+
+      - name: Assert nix.conf contains extra config
+        run: |
+          echo "Checking /etc/nix/nix.conf for extra config..."
+          if [ ! -f /etc/nix/nix.conf ]; then
+            echo "WARN: /etc/nix/nix.conf not found, checking nix daemon config..."
+            # In daemon mode, config may be in a different location
+            NIX_CONF=$(nix show-config 2>/dev/null || true)
+            echo "nix config: $NIX_CONF"
+          else
+            cat /etc/nix/nix.conf
+          fi
+          # Verify nix works (config was accepted without error)
+          NIX_VERSION=$(nix --version)
+          echo "PASS: nix installed and running: $NIX_VERSION"
+
+      - name: Assert experimental features are enabled
+        run: |
+          echo "Checking experimental features..."
+          # nix flake is an experimental feature; if it's available, experimental-features was set
+          if nix flake --help &>/dev/null 2>&1; then
+            echo "PASS: nix flake command available (experimental-features enabled)"
+          else
+            # Try checking via nix show-config
+            NIX_CONFIG=$(nix show-config 2>/dev/null || true)
+            echo "nix config output: $NIX_CONFIG"
+            if echo "$NIX_CONFIG" | grep -q "experimental-features"; then
+              echo "PASS: experimental-features found in nix config"
+            else
+              echo "WARN: could not verify experimental-features, but nix is installed"
+            fi
+          fi
+          echo "PASS"

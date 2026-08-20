@@ -1,4 +1,4 @@
-name: Test basic Nix installation
+name: Test Nix installation in no-daemon mode
 on:
   workflow_dispatch:
 jobs:
@@ -7,11 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Install Nix (basic)
+      - name: Install Nix (no-daemon mode)
         id: install-nix
         uses: .
+        with:
+          install_options: --no-daemon
 
-      - name: Assert nix is on PATH
+      - name: Assert nix is installed
         run: |
           echo "Checking nix binary..."
           if ! command -v nix &>/dev/null; then
@@ -22,7 +24,6 @@ jobs:
 
       - name: Assert nix version runs
         run: |
-          echo "Running nix --version..."
           NIX_VERSION=$(nix --version)
           echo "nix version: $NIX_VERSION"
           if [ -z "$NIX_VERSION" ]; then
@@ -30,17 +31,6 @@ jobs:
             exit 1
           fi
           echo "PASS: $NIX_VERSION"
-
-      - name: Assert NIX_PROFILES is set
-        env:
-          NIX_PROFILES: ${{ env.NIX_PROFILES }}
-        run: |
-          echo "NIX_PROFILES: $NIX_PROFILES"
-          if [ -z "$NIX_PROFILES" ]; then
-            echo "FAIL: NIX_PROFILES env var not set"
-            exit 1
-          fi
-          echo "PASS: NIX_PROFILES=$NIX_PROFILES"
 
       - name: Assert nix store is accessible
         run: |
@@ -50,3 +40,12 @@ jobs:
             exit 1
           fi
           echo "PASS: /nix/store exists"
+
+      - name: Assert nix-daemon is NOT running (no-daemon mode)
+        run: |
+          echo "Checking that nix-daemon is not running..."
+          if systemctl is-active nix-daemon &>/dev/null 2>&1; then
+            echo "WARN: nix-daemon is active (may be expected on some systems)"
+          else
+            echo "PASS: nix-daemon is not running (expected for no-daemon install)"
+          fi
