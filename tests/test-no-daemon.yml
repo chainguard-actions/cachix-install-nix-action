@@ -1,0 +1,38 @@
+name: Test Nix installation in no-daemon mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: install-nix
+        uses: .
+        with:
+          install_options: --no-daemon
+      - name: Assert Nix is installed in no-daemon mode
+        run: |
+          echo "Checking nix binary..."
+          if ! command -v nix &>/dev/null; then
+            echo "FAIL: nix binary not found in PATH"
+            exit 1
+          fi
+          echo "nix found at: $(command -v nix)"
+          echo "nix version: $(nix --version)"
+          echo "PASS: Nix is installed in no-daemon mode"
+      - name: Assert nix-daemon is not running
+        run: |
+          echo "Checking that nix-daemon is not running..."
+          if systemctl is-active nix-daemon.service &>/dev/null; then
+            echo "FAIL: nix-daemon is running but should not be in no-daemon mode"
+            exit 1
+          fi
+          echo "PASS: nix-daemon is not running (expected for no-daemon install)"
+      - name: Assert nix store is accessible
+        run: |
+          echo "Checking /nix/store..."
+          if [ ! -d /nix/store ]; then
+            echo "FAIL: /nix/store does not exist"
+            exit 1
+          fi
+          echo "PASS: /nix/store exists"
