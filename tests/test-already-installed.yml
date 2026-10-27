@@ -1,0 +1,34 @@
+name: Test abort when Nix is already installed
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Put a pre-existing nix on PATH
+        run: |
+          mkdir -p "$RUNNER_TEMP/preinstalled-nix/bin"
+          printf '#!/bin/sh\necho "nix (Nix) preinstalled"\n' > "$RUNNER_TEMP/preinstalled-nix/bin/nix"
+          chmod +x "$RUNNER_TEMP/preinstalled-nix/bin/nix"
+          echo "$RUNNER_TEMP/preinstalled-nix/bin" >> "$GITHUB_PATH"
+          rm -f /tmp/fake-nix-install-args
+      - id: action
+        uses: .
+        with:
+          # Would fail (after retries) if the action tried to download it.
+          install_url: file://${{ github.workspace }}/tests/fixtures/does-not-exist.sh
+          enable_kvm: false
+      - name: Assert installer was not run
+        run: |
+          if [ -e /tmp/fake-nix-install-args ]; then
+            echo "FAIL: installer should not have run"
+            exit 1
+          fi
+          OUT="$(nix --version)"
+          echo "nix: $OUT"
+          if [ "$OUT" != "nix (Nix) preinstalled" ]; then
+            echo "FAIL: preinstalled nix should still be used"
+            exit 1
+          fi
+          echo "PASS"

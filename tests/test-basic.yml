@@ -1,0 +1,59 @@
+name: Test basic usage with defaults
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+          if command -v nix >/dev/null 2>&1; then
+            echo "FAIL: nix unexpectedly already installed"
+            exit 1
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+      - name: Assert installer was invoked with expected options
+        run: |
+          echo "--- installer args ---"
+          cat /tmp/fake-nix-install-args
+          grep -qx -- '--no-channel-add' /tmp/fake-nix-install-args || { echo "FAIL: --no-channel-add missing"; exit 1; }
+          grep -qx -- '--nix-extra-conf-file' /tmp/fake-nix-install-args || { echo "FAIL: --nix-extra-conf-file missing"; exit 1; }
+          echo "PASS"
+      - name: Assert nix.conf contents
+        run: |
+          CONF=/tmp/fake-nix-extra.conf
+          echo "--- extra conf ---"
+          cat "$CONF"
+          for line in "show-trace = true" "max-jobs = auto" "experimental-features = nix-command flakes" "always-allow-substitutes = true"; do
+            if ! grep -qxF "$line" "$CONF"; then
+              echo "FAIL: missing line '$line'"
+              exit 1
+            fi
+          done
+          if ! grep -q '^trusted-users = root' "$CONF"; then
+            echo "FAIL: trusted-users missing (default set_as_trusted_user=true)"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert nix is on PATH and env configured
+        run: |
+          echo "PATH=$PATH"
+          echo "NIX_PROFILES=$NIX_PROFILES"
+          if ! command -v nix >/dev/null 2>&1; then
+            echo "FAIL: nix not on PATH"
+            exit 1
+          fi
+          nix --version
+          if [ "$NIX_PROFILES" != "/nix/var/nix/profiles/default $HOME/.nix-profile" ]; then
+            echo "FAIL: unexpected NIX_PROFILES"
+            exit 1
+          fi
+          echo "PASS"

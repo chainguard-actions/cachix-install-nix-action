@@ -1,0 +1,49 @@
+name: Test set_as_trusted_user=false with install_options
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: false
+          set_as_trusted_user: false
+          install_options: --no-daemon --custom-flag
+      - name: Assert installer options
+        run: |
+          cat /tmp/fake-nix-install-args
+          FIRST="$(head -n1 /tmp/fake-nix-install-args)"
+          if [ "$FIRST" != "--no-daemon" ]; then
+            echo "FAIL: install_options should be prepended, first arg was '$FIRST'"
+            exit 1
+          fi
+          grep -qx -- '--custom-flag' /tmp/fake-nix-install-args || { echo "FAIL: --custom-flag missing"; exit 1; }
+          if grep -qx -- '--daemon' /tmp/fake-nix-install-args; then
+            echo "FAIL: --daemon should not be passed with --no-daemon"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert no trusted-users and single-user config
+        run: |
+          CONF=/tmp/fake-nix-extra.conf
+          cat "$CONF"
+          if grep -q '^trusted-users' "$CONF"; then
+            echo "FAIL: trusted-users should not be set"
+            exit 1
+          fi
+          grep -qxF "build-users-group =" "$CONF" || { echo "FAIL: build-users-group override missing"; exit 1; }
+          if [ ! -f /etc/nix/nix.conf ]; then
+            echo "FAIL: /etc/nix/nix.conf not written for single-user install"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,47 @@
+name: Test extra_nix_config and nix_path
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: false
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command
+            always-allow-substitutes = false
+            substituters = https://cache.nixos.org/
+      - name: Assert extra config applied and defaults suppressed
+        run: |
+          CONF=/tmp/fake-nix-extra.conf
+          cat "$CONF"
+          grep -qxF "experimental-features = nix-command" "$CONF" || { echo "FAIL: custom experimental-features missing"; exit 1; }
+          grep -qxF "substituters = https://cache.nixos.org/" "$CONF" || { echo "FAIL: substituters missing"; exit 1; }
+          if grep -qxF "experimental-features = nix-command flakes" "$CONF"; then
+            echo "FAIL: default experimental-features should not be added"
+            exit 1
+          fi
+          if grep -qxF "always-allow-substitutes = true" "$CONF"; then
+            echo "FAIL: default always-allow-substitutes should not be added"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert NIX_PATH exported
+        run: |
+          echo "NIX_PATH=$NIX_PATH"
+          if [ "$NIX_PATH" != "nixpkgs=channel:nixos-unstable" ]; then
+            echo "FAIL: unexpected NIX_PATH"
+            exit 1
+          fi
+          echo "PASS"
