@@ -1,0 +1,29 @@
+name: Test set_as_trusted_user false
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          rm -rf /tmp/fake-nix
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: 'false'
+          set_as_trusted_user: 'false'
+      - name: Assert no trusted-users
+        run: |
+          cat /tmp/fake-nix/nix.conf
+          if grep -q '^trusted-users' /tmp/fake-nix/nix.conf; then
+            echo "FAIL: trusted-users should not be set"; exit 1
+          fi
+          grep -qxF 'show-trace = true' /tmp/fake-nix/nix.conf || { echo "FAIL: config incomplete"; exit 1; }
+          echo "PASS"

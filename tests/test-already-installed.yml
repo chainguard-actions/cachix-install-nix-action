@@ -1,0 +1,27 @@
+name: Test nix already installed
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Put a pre-existing nix on PATH
+        run: |
+          rm -rf /tmp/fake-nix
+          mkdir -p /tmp/preinstalled-nix/bin
+          printf '#!/bin/sh\necho preinstalled\n' > /tmp/preinstalled-nix/bin/nix
+          chmod +x /tmp/preinstalled-nix/bin/nix
+          echo "/tmp/preinstalled-nix/bin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/does-not-exist.sh
+          enable_kvm: 'false'
+      - name: Assert installer was skipped
+        run: |
+          if [ -e /tmp/fake-nix ]; then
+            echo "FAIL: installer should not have run"; exit 1
+          fi
+          [ "$(nix)" = "preinstalled" ] || { echo "FAIL: nix changed"; exit 1; }
+          echo "PASS"

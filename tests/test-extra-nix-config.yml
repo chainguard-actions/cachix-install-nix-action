@@ -1,0 +1,37 @@
+name: Test extra_nix_config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          rm -rf /tmp/fake-nix
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: 'false'
+          extra_nix_config: |
+            experimental-features = nix-command
+            always-allow-substitutes = false
+            sandbox = false
+      - name: Assert config
+        run: |
+          cat /tmp/fake-nix/nix.conf
+          for line in 'experimental-features = nix-command' 'always-allow-substitutes = false' 'sandbox = false'; do
+            grep -qxF "$line" /tmp/fake-nix/nix.conf || { echo "FAIL: missing '$line'"; exit 1; }
+          done
+          if grep -qxF 'experimental-features = nix-command flakes' /tmp/fake-nix/nix.conf; then
+            echo "FAIL: default experimental-features should not be added"; exit 1
+          fi
+          if grep -qxF 'always-allow-substitutes = true' /tmp/fake-nix/nix.conf; then
+            echo "FAIL: default always-allow-substitutes should not be added"; exit 1
+          fi
+          echo "PASS"

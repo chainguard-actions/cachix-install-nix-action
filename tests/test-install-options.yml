@@ -1,0 +1,33 @@
+name: Test install_options no-daemon
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          rm -rf /tmp/fake-nix
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: 'false'
+          install_options: --no-daemon --custom-flag
+      - name: Assert installer options
+        run: |
+          echo "--- args"; cat /tmp/fake-nix/args
+          [ "$(sed -n 1p /tmp/fake-nix/args)" = "--no-daemon" ] || { echo "FAIL: first arg should be --no-daemon"; exit 1; }
+          [ "$(sed -n 2p /tmp/fake-nix/args)" = "--custom-flag" ] || { echo "FAIL: second arg should be --custom-flag"; exit 1; }
+          if grep -qx -- '--daemon' /tmp/fake-nix/args; then
+            echo "FAIL: --daemon should not be passed"; exit 1
+          fi
+          grep -qx -- '--no-channel-add' /tmp/fake-nix/args || { echo "FAIL: missing --no-channel-add"; exit 1; }
+          echo "--- /etc/nix/nix.conf"; cat /etc/nix/nix.conf
+          grep -qxF 'build-users-group =' /etc/nix/nix.conf || { echo "FAIL: build-users-group missing"; exit 1; }
+          echo "PASS"

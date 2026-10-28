@@ -1,0 +1,30 @@
+name: Test github_access_token
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          rm -rf /tmp/fake-nix
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: 'false'
+          github_access_token: test-config-token-value
+      - name: Assert access token configured
+        run: |
+          if ! grep -qxF 'access-tokens = github.com=test-config-token-value' /tmp/fake-nix/nix.conf; then
+            echo "FAIL: access-tokens line missing"; exit 1
+          fi
+          n=$(grep -c '^access-tokens' /tmp/fake-nix/nix.conf)
+          echo "access-tokens lines: $n"
+          [ "$n" = "1" ] || { echo "FAIL: expected exactly one access-tokens line"; exit 1; }
+          echo "PASS"

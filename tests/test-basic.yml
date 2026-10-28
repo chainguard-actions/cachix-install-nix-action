@@ -1,0 +1,48 @@
+name: Test basic usage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare environment
+        run: |
+          rm -rf /tmp/fake-nix
+          if ! command -v sudo >/dev/null 2>&1; then
+            printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/sudo
+            chmod +x /usr/local/bin/sudo
+          fi
+          if command -v nix >/dev/null 2>&1; then
+            echo "FAIL: nix unexpectedly preinstalled"
+            exit 1
+          fi
+      - id: action
+        uses: .
+        with:
+          install_url: file://${{ github.workspace }}/tests/fixtures/fake-install.sh
+          enable_kvm: 'false'
+      - name: Assert installer invocation and config
+        run: |
+          echo "--- args"; cat /tmp/fake-nix/args
+          echo "--- nix.conf"; cat /tmp/fake-nix/nix.conf
+          grep -qx -- '--no-channel-add' /tmp/fake-nix/args || { echo "FAIL: missing --no-channel-add"; exit 1; }
+          grep -qx -- '--nix-extra-conf-file' /tmp/fake-nix/args || { echo "FAIL: missing --nix-extra-conf-file"; exit 1; }
+          for line in 'show-trace = true' 'max-jobs = auto' 'experimental-features = nix-command flakes' 'always-allow-substitutes = true'; do
+            grep -qxF "$line" /tmp/fake-nix/nix.conf || { echo "FAIL: missing '$line'"; exit 1; }
+          done
+          grep -q '^trusted-users = root' /tmp/fake-nix/nix.conf || { echo "FAIL: missing trusted-users"; exit 1; }
+          echo "PASS"
+      - name: Assert environment set up
+        run: |
+          echo "PATH=$PATH"
+          echo "NIX_PROFILES=$NIX_PROFILES"
+          echo "TMPDIR=${TMPDIR:-}"
+          command -v nix || { echo "FAIL: nix not on PATH"; exit 1; }
+          nix --version | grep -q fake || { echo "FAIL: unexpected nix"; exit 1; }
+          case "$NIX_PROFILES" in
+            "/nix/var/nix/profiles/default "*) ;;
+            *) echo "FAIL: NIX_PROFILES wrong"; exit 1 ;;
+          esac
+          [ -n "${TMPDIR:-}" ] || { echo "FAIL: TMPDIR not set"; exit 1; }
+          echo "PASS"
