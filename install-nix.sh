@@ -149,7 +149,7 @@ fi
 #   - XDG_STATE_HOME, defaulting to .local/state/nix/profile
 #   - $HOME/.nix-profile
 #
-# These directories are created by Nix, but they don't exist at this point.
+# These directories are created by calling `nix profile`, so they don't exist at this point.
 # Without parsing the Nix version, our best bet is the legacy-ish ~/.nix-profile.
 if [[ -n "${NIX_STATE_HOME:-}" ]]; then
   NIX_LINK="$NIX_STATE_HOME/profile"
