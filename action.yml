@@ -43,7 +43,7 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - run : ${GITHUB_ACTION_PATH}/install-nix.sh
+    - run : '"${GITHUB_ACTION_PATH}/install-nix.sh"'
       shell: bash
       env:
         INPUT_EXTRA_NIX_CONFIG: ${{ inputs.extra_nix_config }}
