@@ -2,9 +2,9 @@
   "owner": "cachix",
   "repo": "install-nix-action",
   "version": "v31",
-  "commit_sha": "13d8dd58da0234aa297dedd986986ccb8e7f3e24",
+  "commit_sha": "91f6a0f59e94dfb2cfed0f4000f36a68ead1d20c",
   "url": "https://github.com/cachix/install-nix-action",
-  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "policy_sha": "374911c4be584df24e6da57af2d990570ef0f859",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
   "test_agent_version": "2",
   "harden_agent_version": "2"

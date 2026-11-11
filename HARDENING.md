@@ -4,48 +4,27 @@
 
 > This file was generated automatically by the hardening agent.
 
-**Policy SHA:** `d636be7e43ef829af6e853da6b3c7566db9f72fe`
+**Policy SHA:** `374911c4be584df24e6da57af2d990570ef0f859`
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
 **Harden Agent Version:** `2`
 
-Action **cachix--install-nix-action/v31** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **cachix--install-nix-action/v31** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### github-env-injection (severity: high)
 
-install-nix.sh writes the user-controlled input `INPUT_NIX_PATH` (sourced from `inputs.nix_path`) directly to `$GITHUB_ENV` without sanitization. An attacker can inject newlines into this value to set arbitrary environment variables for subsequent steps. The required sanitization step (`printf '%s' "$VAR" | tr -d '\n\r'`) is absent.
-
-Offending line:
-  echo "NIX_PATH=${INPUT_NIX_PATH}" >> "$GITHUB_ENV"
+The composite step (action.yml line 29) runs install-nix.sh. That script writes untrusted values to GitHub's special environment files without first applying `printf '%s' ... | tr -d '\n\r'`. (1) `echo "NIX_PATH=${INPUT_NIX_PATH}" >>"$GITHUB_ENV"`: INPUT_NIX_PATH comes from `inputs.nix_path`. If the value contains a newline, the caller can inject any variable into $GITHUB_ENV, for example LD_PRELOAD or BASH_ENV. (2) NIX_LINK is set to `$NIX_STATE_HOME/profile`. NIX_STATE_HOME is inherited from the calling workflow's environment. NIX_LINK is then written to $GITHUB_ENV (`echo "NIX_PROFILES=... $NIX_LINK"`, and the NIX_SSL_CERT_FILE line) and to $GITHUB_PATH (`echo "$NIX_LINK/bin" >>"$GITHUB_PATH"`), also without newline stripping. Fix: strip newlines from each value before writing it, e.g. `safe=$(printf '%s' "$INPUT_NIX_PATH" | tr -d '\n\r')`.
 
 Locations:
 
+- `action.yml:29`
 - `install-nix.sh:129`
-
-### github-env-injection (severity: high)
-
-install-nix.sh writes `NIX_LINK` to `$GITHUB_ENV` (as part of `NIX_PROFILES`) without sanitization. `NIX_LINK` is derived from `NIX_STATE_HOME`, an inherited process environment variable that is fully controlled by the calling workflow. A calling workflow can set `NIX_STATE_HOME` to a value containing newlines, injecting arbitrary environment variables into `$GITHUB_ENV`.
-
-Offending line:
-  echo "NIX_PROFILES=/nix/var/nix/profiles/default $NIX_LINK" >> "$GITHUB_ENV"
-
-Locations:
-
-- `install-nix.sh:152`
-
-### github-env-injection (severity: high)
-
-install-nix.sh writes `$NIX_LINK/bin` to `$GITHUB_PATH` without sanitization. `NIX_LINK` is derived from `NIX_STATE_HOME`, an inherited process environment variable controlled by the calling workflow. A calling workflow can set `NIX_STATE_HOME` to a value containing newlines, injecting arbitrary entries into `$GITHUB_PATH` and enabling path-hijacking attacks.
-
-Offending line:
-  echo "$NIX_LINK/bin" >> "$GITHUB_PATH"
-
-Locations:
-
-- `install-nix.sh:185`
+- `install-nix.sh:148`
+- `install-nix.sh:154`
+- `install-nix.sh:182`
 
 ## Iteration Notes
 
@@ -55,7 +34,5 @@ Locations:
 
 **Notes:**
 
-Fixed all three github-env-injection findings in install-nix.sh:
-1. Line 129 (INPUT_NIX_PATH → GITHUB_ENV): Added `safe_nix_path=$(printf '%s' "$INPUT_NIX_PATH" | tr -d '\n\r')` and used `safe_nix_path` in the echo.
-2. Lines 152 & 185 (NIX_LINK → GITHUB_ENV and GITHUB_PATH): Added a single sanitization step `NIX_LINK=$(printf '%s' "$NIX_LINK" | tr -d '\n\r')` immediately after NIX_LINK is set, so all downstream uses of NIX_LINK are already clean.
+In install-nix.sh: (1) INPUT_NIX_PATH goes through printf '%s' | tr -d '\n\r' before it is written as NIX_PATH to GITHUB_ENV. (2) NIX_LINK, which comes from NIX_STATE_HOME or HOME, is cleaned the same way right after it is set. That covers the NIX_PROFILES and NIX_SSL_CERT_FILE writes to GITHUB_ENV and the $NIX_LINK/bin write to GITHUB_PATH. (3) As an extra precaution, RUNNER_TEMP is also cleaned before it is written as TMPDIR. action.yml needed no change because its inputs are already passed through env:.
 

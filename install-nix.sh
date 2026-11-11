@@ -28,9 +28,16 @@ trap 'rm -rf "$workdir"' EXIT
 add_config() {
   echo "$1" >>"$workdir/nix.conf"
 }
+
+# Enable traces by default to help with debugging
 add_config "show-trace = true"
 # Set jobs to number of cores
 add_config "max-jobs = auto"
+# Enable flakes and the new CLI
+add_config "experimental-features = nix-command flakes"
+# Always allow substituting from the cache, even if a derivation has `allowSubstitutes = false`.
+# This is a CI optimisation to avoid having to download the inputs for already-cached derivations just to rebuild trivial text files.
+add_config "always-allow-substitutes = true"
 # Configure the nix-daemon to use certificates.
 # In multi-user installs, NIX_SSL_CERT_FILE only works if set in the daemon's service file.
 if [[ $OSTYPE =~ darwin ]]; then
@@ -56,14 +63,6 @@ fi
 # Append extra nix configuration if provided
 if [[ -n "${INPUT_EXTRA_NIX_CONFIG:-}" ]]; then
   add_config "$INPUT_EXTRA_NIX_CONFIG"
-fi
-if [[ ! $INPUT_EXTRA_NIX_CONFIG =~ "experimental-features" ]]; then
-  add_config "experimental-features = nix-command flakes"
-fi
-# Always allow substituting from the cache, even if the derivation has `allowSubstitutes = false`.
-# This is a CI optimisation to avoid having to download the inputs for already-cached derivations to rebuild trivial text files.
-if [[ ! $INPUT_EXTRA_NIX_CONFIG =~ "always-allow-substitutes" ]]; then
-  add_config "always-allow-substitutes = true"
 fi
 
 # Nix installer flags
@@ -102,7 +101,7 @@ echo "installer options: ${installer_options[*]}"
 
 # There is --retry-on-errors, but only newer curl versions support that
 curl_retries=5
-nix_version=2.35.2
+nix_version=2.35.5
 while ! curl -sS -o "$workdir/install" -v --fail -L "${INPUT_INSTALL_URL:-https://releases.nixos.org/nix/nix-${nix_version}/install}"; do
   sleep 1
   ((curl_retries--))
@@ -133,7 +132,8 @@ fi
 # Set temporary directory if not already set
 # Fixes https://github.com/cachix/install-nix-action/issues/197
 if [[ -z "${TMPDIR:-}" ]]; then
-  echo "TMPDIR=${RUNNER_TEMP}" >>"$GITHUB_ENV"
+  safe_runner_temp=$(printf '%s' "$RUNNER_TEMP" | tr -d '\n\r')
+  echo "TMPDIR=${safe_runner_temp}" >>"$GITHUB_ENV"
 fi
 
 # Determine the profile path.
@@ -150,7 +150,7 @@ if [[ -n "${NIX_STATE_HOME:-}" ]]; then
 else
   NIX_LINK="$HOME/.nix-profile"
 fi
-# Sanitize NIX_LINK to prevent newline injection into GITHUB_ENV / GITHUB_PATH
+# Strip newlines so the value cannot inject extra entries into GITHUB_ENV/GITHUB_PATH
 NIX_LINK=$(printf '%s' "$NIX_LINK" | tr -d '\n\r')
 
 # Set Nix profiles
