@@ -16,6 +16,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v31.11.2 | [`v31.11.2`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31.11.2) | [`448cde7`](https://github.com/cachix/install-nix-action/commit/448cde739abec1eaf0646249e3d25bb8d9bc7702) | — |
 | v31.11.3 | [`v31.11.3`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31.11.3) | [`75c75c3`](https://github.com/cachix/install-nix-action/commit/75c75c31ebece974e48ebc36b4ad125bd97bd97b) | [`HARDENING.md`](https://github.com/chainguard-actions/cachix-install-nix-action/blob/v31.11.3/HARDENING.md) |
 | v31.11.5 | [`v31.11.5`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v31.11.5) | [`3dc140b`](https://github.com/cachix/install-nix-action/commit/3dc140bfc76c49fbd4dd958429132e3746bcb086) | [`HARDENING.md`](https://github.com/chainguard-actions/cachix-install-nix-action/blob/v31.11.5/HARDENING.md) |
+| v32.0.0 | [`v32.0.0`](https://github.com/chainguard-actions/cachix-install-nix-action/tree/v32.0.0) | [`bb0495a`](https://github.com/cachix/install-nix-action/commit/bb0495a1086c46893eee56f32fd192dfe4a15bb9) | [`HARDENING.md`](https://github.com/chainguard-actions/cachix-install-nix-action/blob/v32.0.0/HARDENING.md) |
 
 ## Privacy
 
